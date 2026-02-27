@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素价态二维图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #4dd0e1;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background-color: #333;
+            color: #e0e0e0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            background-color: #444;
+        }
+
+        .tab-btn.active {
+            background-color: #4dd0e1;
+            color: #000;
+        }
+
+        .element-section {
+            display: none;
+            background-color: #222;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+
+        .element-section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4dd0e1;
+            margin-bottom: 20px;
+        }
+
+        .chart-wrapper {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .chart-container {
+            flex: 1;
+            min-width: 700px;
+            position: relative;
+            background-color: #1a1a1a;
+            padding: 30px;
+            border-radius: 4px;
+        }
+
+        .formula-container {
+            flex: 1;
+            min-width: 300px;
+            background-color: #1a1a1a;
+            padding: 20px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        svg {
+            width: 100%;
+            height: auto;
+        }
+
+        .formula-item {
+            margin-bottom: 20px;
+            padding: 12px;
+            background-color: #2a2a2a;
+            border-left: 3px solid #4dd0e1;
+            border-radius: 2px;
+        }
+
+        .formula-label {
+            color: #4dd0e1;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .formula-equation {
+            color: #b0bec5;
+            font-size: 13px;
+            margin: 6px 0;
+            word-wrap: break-word;
+        }
+
+        .formula-equation.ionic {
+            color: #9ccc65;
+        }
+
+        .scrollable {
+            scrollbar-color: #555 #2a2a2a;
+            scrollbar-width: thin;
+        }
+
+        .scrollable::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scrollable::-webkit-scrollbar-track {
+            background: #2a2a2a;
+        }
+
+        .scrollable::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            border: 1px solid #444;
+            font-size: 13px;
+            color: #b0bec5;
+        }
+
+        .note {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #263238;
+            border-left: 3px solid #ff6f00;
+            color: #ffb74d;
+            font-size: 12px;
+            border-radius: 2px;
+        }
+
+        .substance-box {
+            position: absolute;
+            padding: 8px 12px;
+            background-color: #4dd0e1;
+            color: #000;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(77, 208, 225, 0.3);
+            white-space: nowrap;
+            min-width: 60px;
+        }
+
+        .substance-box.reduced {
+            background-color: #81c784;
+        }
+
+        .substance-box.oxidized {
+            background-color: #e57373;
+        }
+
+        @media (max-width: 1200px) {
+            .chart-wrapper {
+                flex-direction: column;
+            }
+
+            .chart-container {
+                min-width: 100%;
+            }
+
+            .formula-container {
+                min-width: 100%;
+            }
+        }
+
+        .axis-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            fill: #fff;
+        }
+
+        .grid-line {
+            stroke: #444;
+            stroke-dasharray: 3,3;
+            stroke-width: 0.5;
+        }
+
+        .axis-line {
+            stroke: #4dd0e1;
+            stroke-width: 2;
+        }
+
+        .arrow-line {
+            stroke: #ff6f00;
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        .arrow-head {
+            fill: #ff6f00;
+        }
+
+        .arrow-label {
+            fill: #ff6f00;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">元素价态转化关系图</div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('na')">Na</button>
+            <button class="tab-btn" onclick="switchTab('fe')">Fe</button>
+            <button class="tab-btn" onclick="switchTab('al')">Al</button>
+            <button class="tab-btn" onclick="switchTab('cl')">Cl</button>
+        </div>
+
+        <!-- Na Section -->
+        <div id="na" class="element-section active">
+            <div class="section-title">钠 (Na) 的价态与转化</div>
+            <div class="chart-wrapper">
+                <div class="chart-container">
+                    <svg id="naSvg" viewBox="0 0 800 600"></svg>
+                </div>
+                <div class="formula-container scrollable">
+                    <div class="formula-item">
+                        <div class="formula-label">①：Na与H₂O反应</div>
+                        <div class="formula-equation">2Na + 2H₂O = 2NaOH + H₂↑</div>
+                        <div class="formula-equation ionic">2Na + 2H₂O = 2Na⁺ + 2OH⁻ + H₂↑</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">②：Na₂O与H₂O反应</div>
+                        <div class="formula-equation">Na₂O + H₂O = 2NaOH</div>
+                        <div class="formula-equation ionic">Na₂O + H₂O = 2Na⁺ + 2OH⁻</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">③：Na₂O₂与H₂O反应</div>
+                        <div class="formula-equation">2Na₂O₂ + 2H₂O = 4NaOH + O₂↑</div>
+                        <div class="formula-equation ionic">2Na₂O₂ + 2H₂O = 4Na⁺ + 4OH⁻ + O₂↑</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">④：Na₂O₂与CO₂反应</div>
+                        <div class="formula-equation">2Na₂O₂ + 2CO₂ = 2Na₂CO₃ + O₂</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑤：NaOH与HCl反应</div>
+                        <div class="formula-equation">NaOH + HCl = NaCl + H₂O</div>
+                        <div class="formula-equation ionic">OH⁻ + H⁺ = H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑥：NaHCO₃与HCl反应</div>
+                        <div class="formula-equation">NaHCO₃ + HCl = NaCl + H₂O + CO₂↑</div>
+                        <div class="formula-equation ionic">HCO₃⁻ + H⁺ = H₂O + CO₂↑</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑦：Na₂CO₃与盐酸反应（少量HCl）</div>
+                        <div class="formula-equation">Na₂CO₃ + 2HCl = 2NaCl + H₂O + CO₂↑</div>
+                        <div class="formula-equation ionic">CO₃²⁻ + 2H⁺ = H₂O + CO₂↑</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑧：Na₂CO₃与盐酸反应（过量HCl）</div>
+                        <div class="formula-equation">Na₂CO₃ + 2HCl = 2NaCl + H₂O + CO₂↑</div>
+                        <div class="formula-equation ionic">CO₃²⁻ + 2H⁺ = H₂O + CO₂↑</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑨：Na₂CO₃与NaOH反应</div>
+                        <div class="formula-equation">无反应</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑩：NaHCO₃与NaOH反应</div>
+                        <div class="formula-equation">NaHCO₃ + NaOH = Na₂CO₃ + H₂O</div>
+                        <div class="formula-equation ionic">HCO₃⁻ + OH⁻ = CO₃²⁻ + H₂O</div>
+                    </div>
+                    <div class="legend">
+                        <strong>说明：</strong><br>
+                        • Na₂CO₃与少量HCl：先形成NaHCO₃，再生成CO₂<br>
+                        • Na₂CO₃与过量HCl：HCO₃⁻继续与H⁺反应，产生更多CO₂<br>
+                        • 加HCl至饱和后加NaOH会产生气泡（CO₂释放）
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fe Section -->
+        <div id="fe" class="element-section">
+            <div class="section-title">铁 (Fe) 的价态与转化</div>
+            <div class="chart-wrapper">
+                <div class="chart-container">
+                    <svg id="feSvg" viewBox="0 0 800 650"></svg>
+                </div>
+                <div class="formula-container scrollable">
+                    <div class="formula-item">
+                        <div class="formula-label">①：Fe与H₂O反应</div>
+                        <div class="formula-equation">3Fe + 4H₂O(蒸汽) = Fe₃O₄ + 4H₂</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">②：Fe与O₂反应（点燃）</div>
+                        <div class="formula-equation">3Fe + 2O₂ = Fe₃O₄</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">③：Fe与Cl₂反应</div>
+                        <div class="formula-equation">2Fe + 3Cl₂ = 2FeCl₃</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">④：FeO与H₂反应</div>
+                        <div class="formula-equation">FeO + H₂ = Fe + H₂O</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑤：Fe₂O₃与H₂反应</div>
+                        <div class="formula-equation">Fe₂O₃ + 3H₂ = 2Fe + 3H₂O</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑥：Fe₃O₄与H₂反应</div>
+                        <div class="formula-equation">Fe₃O₄ + 4H₂ = 3Fe + 4H₂O</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑦：Fe与稀HCl反应</div>
+                        <div class="formula-equation">Fe + 2HCl = FeCl₂ + H₂↑</div>
+                        <div class="formula-equation ionic">Fe + 2H⁺ = Fe²⁺ + H₂↑</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑧：FeCl₂与Cl₂反应</div>
+                        <div class="formula-equation">2FeCl₂ + Cl₂ = 2FeCl₃</div>
+                        <div class="formula-equation ionic">2Fe²⁺ + Cl₂ = 2Fe³⁺ + 2Cl⁻</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑨：Fe(OH)₂与O₂反应</div>
+                        <div class="formula-equation">4Fe(OH)₂ + O₂ + 2H₂O = 4Fe(OH)₃</div>
+                        <div class="formula-equation ionic">4Fe²⁺ + O₂ + 6H₂O = 4Fe(OH)₃↓</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑩：Fe(OH)₃与Fe反应（还原）</div>
+                        <div class="formula-equation">2Fe(OH)₃ + Fe = 3Fe(OH)₂</div>
+                        <div class="formula-equation ionic">2Fe³⁺ + Fe = 3Fe²⁺</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑪：FeCl₃与Fe反应</div>
+                        <div class="formula-equation">2FeCl₃ + Fe = 3FeCl₂</div>
+                        <div class="formula-equation ionic">2Fe³⁺ + Fe = 3Fe²⁺</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑫：Fe(OH)₂与Fe(OH)₃转化</div>
+                        <div class="formula-equation">Fe(OH)₂ → (O₂ + H₂O) → Fe(OH)₃</div>
+                        <div class="formula-equation ionic">Fe²⁺ + O₂ + H₂O → Fe³⁺</div>
+                    </div>
+                    <div class="legend">
+                        <strong>说明：</strong><br>
+                        • Fe₃O₄是+2和+3混合价态的氧化物<br>
+                        • Fe(OH)₂不稳定，易与O₂反应生成Fe(OH)₃<br>
+                        • Fe²⁺可被O₂、Cl₂等强氧化剂氧化
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Al Section -->
+        <div id="al" class="element-section">
+            <div class="section-title">铝 (Al) 的价态与转化</div>
+            <div class="chart-wrapper">
+                <div class="chart-container">
+                    <svg id="alSvg" viewBox="0 0 800 600"></svg>
+                </div>
+                <div class="formula-container scrollable">
+                    <div class="formula-item">
+                        <div class="formula-label">①：Al与O₂反应（点燃）</div>
+                        <div class="formula-equation">4Al + 3O₂ = 2Al₂O₃</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">②：Al与稀HCl反应</div>
+                        <div class="formula-equation">2Al + 6HCl = 2AlCl₃ + 3H₂↑</div>
+                        <div class="formula-equation ionic">2Al + 6H⁺ = 2Al³⁺ + 3H₂↑</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">③：Al₂O₃与HCl反应</div>
+                        <div class="formula-equation">Al₂O₃ + 6HCl = 2AlCl₃ + 3H₂O</div>
+                        <div class="formula-equation ionic">Al₂O₃ + 6H⁺ = 2Al³⁺ + 3H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">④：Al(OH)₃与HCl反应</div>
+                        <div class="formula-equation">Al(OH)₃ + 3HCl = AlCl₃ + 3H₂O</div>
+                        <div class="formula-equation ionic">Al(OH)₃ + 3H⁺ = Al³⁺ + 3H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑤：Al₂O₃与NaOH反应</div>
+                        <div class="formula-equation">Al₂O₃ + 2NaOH = 2NaAlO₂ + H₂O</div>
+                        <div class="formula-equation ionic">Al₂O₃ + 2OH⁻ = 2AlO₂⁻ + H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑥：Al(OH)₃与NaOH反应</div>
+                        <div class="formula-equation">Al(OH)₃ + NaOH = NaAlO₂ + 2H₂O</div>
+                        <div class="formula-equation ionic">Al(OH)₃ + OH⁻ = AlO₂⁻ + 2H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑦：AlCl₃与NaOH反应（少量）</div>
+                        <div class="formula-equation">AlCl₃ + 3NaOH = Al(OH)₃↓ + 3NaCl</div>
+                        <div class="formula-equation ionic">Al³⁺ + 3OH⁻ = Al(OH)₃↓</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑧：AlCl₃与NaOH反应（过量）</div>
+                        <div class="formula-equation">AlCl₃ + 4NaOH = NaAlO₂ + 3NaCl + 2H₂O</div>
+                        <div class="formula-equation ionic">Al³⁺ + 4OH⁻ = AlO₂⁻ + 2H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑨：Al与NaOH反应</div>
+                        <div class="formula-equation">2Al + 2NaOH + 2H₂O = 2NaAlO₂ + 3H₂↑</div>
+                        <div class="formula-equation ionic">2Al + 2OH⁻ + 2H₂O = 2AlO₂⁻ + 3H₂↑</div>
+                    </div>
+                    <div class="legend">
+                        <strong>说明：</strong><br>
+                        • Al(OH)₃是两性氢氧化物，既能与酸反应，也能与碱反应<br>
+                        • Na[Al(OH)₄]和NaAlO₂是同一物质<br>
+                        • Al₂O₃也是两性氧化物
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cl Section -->
+        <div id="cl" class="element-section">
+            <div class="section-title">氯 (Cl) 的价态与转化</div>
+            <div class="chart-wrapper">
+                <div class="chart-container">
+                    <svg id="clSvg" viewBox="0 0 800 650"></svg>
+                </div>
+                <div class="formula-container scrollable">
+                    <div class="formula-item">
+                        <div class="formula-label">①：Cl₂与H₂反应</div>
+                        <div class="formula-equation">Cl₂ + H₂ = 2HCl</div>
+                        <div class="formula-equation ionic">无离子反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">②：Cl₂与H₂O反应</div>
+                        <div class="formula-equation">Cl₂ + H₂O = HCl + HClO</div>
+                        <div class="formula-equation ionic">Cl₂ + H₂O = H⁺ + Cl⁻ + HClO</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">③：Cl₂与NaOH反应（冷稀溶液）</div>
+                        <div class="formula-equation">Cl₂ + 2NaOH = NaCl + NaClO + H₂O</div>
+                        <div class="formula-equation ionic">Cl₂ + 2OH⁻ = Cl⁻ + ClO⁻ + H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">④：Cl₂与NaOH反应（热浓溶液）</div>
+                        <div class="formula-equation">3Cl₂ + 6NaOH(热) = 5NaCl + NaClO₃ + 3H₂O</div>
+                        <div class="formula-equation ionic">3Cl₂ + 6OH⁻ = 5Cl⁻ + ClO₃⁻ + 3H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑤：Cl₂与Ca(OH)₂反应</div>
+                        <div class="formula-equation">2Cl₂ + 2Ca(OH)₂ = Ca(ClO)₂ + CaCl₂ + 2H₂O</div>
+                        <div class="formula-equation ionic">Cl₂ + 2OH⁻ = Cl⁻ + ClO⁻ + H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑥：HClO的制备（原位生成）</div>
+                        <div class="formula-equation">Cl₂ + H₂O = HCl + HClO</div>
+                        <div class="formula-equation ionic">Cl₂ + H₂O = H⁺ + Cl⁻ + HClO</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑦：CaClO的制备</div>
+                        <div class="formula-equation">Cl₂ + Ca(OH)₂ = Ca(ClO)Cl + H₂O</div>
+                        <div class="formula-equation ionic">Cl₂ + 2OH⁻ = Cl⁻ + ClO⁻ + H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑧：NaClO的制备</div>
+                        <div class="formula-equation">Cl₂ + 2NaOH(冷稀) = NaCl + NaClO + H₂O</div>
+                        <div class="formula-equation ionic">Cl₂ + 2OH⁻ = Cl⁻ + ClO⁻ + H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑨：HClO与HCl反应</div>
+                        <div class="formula-equation">HClO + HCl无反应（但HClO在酸性条件下分解）</div>
+                        <div class="formula-equation ionic">无反应</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑩：KClO₃的制备（Cl₂与热浓NaOH）</div>
+                        <div class="formula-equation">3Cl₂ + 6NaOH(热) = 5NaCl + NaClO₃ + 3H₂O</div>
+                        <div class="formula-equation ionic">3Cl₂ + 6OH⁻ = 5Cl⁻ + ClO₃⁻ + 3H₂O</div>
+                    </div>
+                    <div class="formula-item">
+                        <div class="formula-label">⑪：HClO₄与Cl₂关系</div>
+                        <div class="formula-equation">HClO₄不能由Cl₂直接制备，需由ClO₃⁻进一步化学变化</div>
+                        <div class="formula-equation ionic">-</div>
+                    </div>
+                    <div class="legend">
+                        <strong>说明：</strong><br>
+                        • Cl₂：-1、0、+1、+3、+5、+7多种价态<br>
+                        • 冷稀NaOH：生成NaClO（+1价）<br>
+                        • 热浓NaOH：生成NaClO₃（+5价）<br>
+                        • ClO⁻和ClO₃⁻有相互转化关系
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(element) {
+            // Hide all sections
+            document.querySelectorAll('.element-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Remove active from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(element).classList.add('active');
+
+            // Mark button as active
+            event.target.classList.add('active');
+
+            // Draw the appropriate chart
+            setTimeout(() => {
+                if (element === 'na') drawNaChart();
+                else if (element === 'fe') drawFeChart();
+                else if (element === 'al') drawAlChart();
+                else if (element === 'cl') drawClChart();
+            }, 50);
+        }
+
+        function drawNaChart() {
+            const svg = document.getElementById('naSvg');
+            svg.innerHTML = '';
+
+            const width = 800;
+            const height = 600;
+            const marginLeft = 80;
+            const marginTop = 60;
+            const marginRight = 60;
+            const marginBottom = 80;
+
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
+
+            // Define valence states for Na
+            const valenceStates = [0, 1];
+            const substances = {
+                0: [{ name: 'Na', x: 1 }],
+                1: [
+                    { name: 'Na₂O', x: 2 },
+                    { name: 'Na₂O₂', x: 3 },
+                    { name: 'NaOH', x: 4 },
+                    { name: 'NaHCO₃', x: 5 },
+                    { name: 'Na₂CO₃', x: 6 }
+                ]
+            };
+
+            // Background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', width);
+            bg.setAttribute('height', height);
+            bg.setAttribute('fill', '#1a1a1a');
+            svg.appendChild(bg);
+
+            // Draw grid and axes
+            drawCoordinateSystem(svg, width, height, marginLeft, marginTop, marginRight, marginBottom, valenceStates, substances);
+
+            // Place substance boxes
+            const yScale = chartHeight / (valenceStates.length - 1);
+            const xCategories = ['单质', 'Na₂O', 'Na₂O₂', 'NaOH', 'NaHCO₃', 'Na₂CO₃'];
+            const xScale = chartWidth / (xCategories.length + 1);
+
+            substances[0].forEach(sub => {
+                const x = marginLeft + xScale * 1;
+                const y = marginTop + chartHeight - yScale * 0;
+                addSubstanceBox(svg, sub.name, x, y);
+            });
+
+            substances[1].forEach((sub, idx) => {
+                const x = marginLeft + xScale * (idx + 2);
+                const y = marginTop + chartHeight - yScale * 1;
+                addSubstanceBox(svg, sub.name, x, y);
+            });
+
+            // Draw arrows
+            drawArrow(svg, marginLeft + xScale * 1, marginTop + chartHeight, marginLeft + xScale * 2, marginTop + chartHeight - yScale, '①', 'down-right');
+            drawArrow(svg, marginLeft + xScale * 1, marginTop + chartHeight, marginLeft + xScale * 3, marginTop + chartHeight - yScale, '②', 'down-right');
+            drawArrow(svg, marginLeft + xScale * 2, marginTop + chartHeight - yScale, marginLeft + xScale * 3, marginTop + chartHeight - yScale, '③', 'right');
+            drawArrow(svg, marginLeft + xScale * 2, marginTop + chartHeight - yScale, marginLeft + xScale * 4, marginTop + chartHeight - yScale, '④', 'right');
+        }
+
+        function drawFeChart() {
+            const svg = document.getElementById('feSvg');
+            svg.innerHTML = '';
+
+            const width = 800;
+            const height = 650;
+            const marginLeft = 80;
+            const marginTop = 60;
+            const marginRight = 60;
+            const marginBottom = 80;
+
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
+
+            // Define valence states for Fe
+            const valenceStates = [0, 2, 3];
+            const substances = {
+                0: [{ name: 'Fe' }],
+                2: [
+                    { name: 'FeO' },
+                    { name: 'Fe(OH)₂' },
+                    { name: 'FeCl₂' }
+                ],
+                3: [
+                    { name: 'Fe₂O₃' },
+                    { name: 'Fe(OH)₃' },
+                    { name: 'FeCl₃' }
+                ],
+                'mixed': [{ name: 'Fe₃O₄', valence: '+2,+3' }]
+            };
+
+            // Background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', width);
+            bg.setAttribute('height', height);
+            bg.setAttribute('fill', '#1a1a1a');
+            svg.appendChild(bg);
+
+            // Y-axis labels and positions
+            const yPositions = {
+                0: marginTop + chartHeight,
+                2: marginTop + chartHeight * 0.66,
+                3: marginTop + chartHeight * 0.33,
+                'mixed': marginTop + chartHeight * 0.5
+            };
+
+            const yLabels = {
+                0: '0',
+                2: '+2',
+                3: '+3'
+            };
+
+            // Draw Y-axis and labels
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', marginLeft);
+            yAxis.setAttribute('y1', marginTop);
+            yAxis.setAttribute('x2', marginLeft);
+            yAxis.setAttribute('y2', marginTop + chartHeight);
+            yAxis.setAttribute('class', 'axis-line');
+            svg.appendChild(yAxis);
+
+            // Y-axis labels
+            Object.entries(yLabels).forEach(([val, label]) => {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', marginLeft - 20);
+                text.setAttribute('y', yPositions[val] + 5);
+                text.setAttribute('text-anchor', 'end');
+                text.setAttribute('class', 'axis-label');
+                text.textContent = label;
+                svg.appendChild(text);
+            });
+
+            // X-axis
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', marginLeft);
+            xAxis.setAttribute('y1', marginTop + chartHeight);
+            xAxis.setAttribute('x2', width - marginRight);
+            xAxis.setAttribute('y2', marginTop + chartHeight);
+            xAxis.setAttribute('class', 'axis-line');
+            svg.appendChild(xAxis);
+
+            // X-axis categories
+            const xCategories = ['单质', '氧化物', '氢氧化物', '盐'];
+            const xPositions = [
+                marginLeft + 60,
+                marginLeft + 200,
+                marginLeft + 360,
+                marginLeft + 520
+            ];
+
+            xCategories.forEach((cat, idx) => {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', xPositions[idx]);
+                text.setAttribute('y', marginTop + chartHeight + 40);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('class', 'axis-label');
+                text.textContent = cat;
+                svg.appendChild(text);
+            });
+
+            // X-axis label
+            const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xLabel.setAttribute('x', width / 2);
+            xLabel.setAttribute('y', height - 10);
+            xLabel.setAttribute('text-anchor', 'middle');
+            xLabel.setAttribute('class', 'axis-label');
+            xLabel.textContent = '物质类别';
+            svg.appendChild(xLabel);
+
+            // Y-axis label
+            const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yLabel.setAttribute('x', 20);
+            yLabel.setAttribute('y', marginTop + chartHeight / 2);
+            yLabel.setAttribute('text-anchor', 'middle');
+            yLabel.setAttribute('transform', `rotate(-90, 20, ${marginTop + chartHeight / 2})`);
+            yLabel.setAttribute('class', 'axis-label');
+            yLabel.textContent = '价态';
+            svg.appendChild(yLabel);
+
+            // Place substance boxes
+            addSubstanceBox(svg, 'Fe', xPositions[0], yPositions[0]);
+            addSubstanceBox(svg, 'FeO', xPositions[1] - 50, yPositions[2]);
+            addSubstanceBox(svg, 'Fe₂O₃', xPositions[1] + 50, yPositions[3]);
+            addSubstanceBox(svg, 'Fe₃O₄', xPositions[1], yPositions['mixed']);
+            addSubstanceBox(svg, 'Fe(OH)₂', xPositions[2] - 60, yPositions[2]);
+            addSubstanceBox(svg, 'Fe(OH)₃', xPositions[2] + 60, yPositions[3]);
+            addSubstanceBox(svg, 'FeCl₂', xPositions[3] - 50, yPositions[2]);
+            addSubstanceBox(svg, 'FeCl₃', xPositions[3] + 50, yPositions[3]);
+
+            // Draw transformation arrows
+            drawBidirectionalArrow(svg, xPositions[0] + 40, yPositions[0], xPositions[1] - 50, yPositions[2], '①');
+            drawBidirectionalArrow(svg, xPositions[0] + 40, yPositions[0], xPositions[1] + 50, yPositions[3], '②');
+            drawArrow(svg, xPositions[1] - 50, yPositions[2] - 20, xPositions[1] + 50, yPositions[3] + 20, '⑧', 'diagonal');
+            drawBidirectionalArrow(svg, xPositions[2] - 60, yPositions[2], xPositions[2] + 60, yPositions[3], '⑨');
+            drawBidirectionalArrow(svg, xPositions[3] - 50, yPositions[2], xPositions[3] + 50, yPositions[3], '⑪');
+        }
+
+        function drawAlChart() {
+            const svg = document.getElementById('alSvg');
+            svg.innerHTML = '';
+
+            const width = 800;
+            const height = 600;
+            const marginLeft = 80;
+            const marginTop = 60;
+            const marginRight = 60;
+            const marginBottom = 80;
+
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
+
+            // Background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', width);
+            bg.setAttribute('height', height);
+            bg.setAttribute('fill', '#1a1a1a');
+            svg.appendChild(bg);
+
+            // Y-axis positions
+            const yPositions = {
+                0: marginTop + chartHeight,
+                3: marginTop + chartHeight / 2
+            };
+
+            const yLabels = {
+                0: '0',
+                3: '+3'
+            };
+
+            // Draw Y-axis
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', marginLeft);
+            yAxis.setAttribute('y1', marginTop);
+            yAxis.setAttribute('x2', marginLeft);
+            yAxis.setAttribute('y2', marginTop + chartHeight);
+            yAxis.setAttribute('class', 'axis-line');
+            svg.appendChild(yAxis);
+
+            // Y-axis labels
+            Object.entries(yLabels).forEach(([val, label]) => {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', marginLeft - 20);
+                text.setAttribute('y', yPositions[val] + 5);
+                text.setAttribute('text-anchor', 'end');
+                text.setAttribute('class', 'axis-label');
+                text.textContent = label;
+                svg.appendChild(text);
+            });
+
+            // X-axis
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', marginLeft);
+            xAxis.setAttribute('y1', marginTop + chartHeight);
+            xAxis.setAttribute('x2', width - marginRight);
+            xAxis.setAttribute('y2', marginTop + chartHeight);
+            xAxis.setAttribute('class', 'axis-line');
+            svg.appendChild(xAxis);
+
+            // X-axis categories
+            const xCategories = ['单质', '氧化物', '氢氧化物', '碱性铝酸盐', '盐'];
+            const xPositions = [
+                marginLeft + 80,
+                marginLeft + 200,
+                marginLeft + 330,
+                marginLeft + 460,
+                marginLeft + 580
+            ];
+
+            xCategories.forEach((cat, idx) => {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', xPositions[idx]);
+                text.setAttribute('y', marginTop + chartHeight + 40);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('class', 'axis-label');
+                text.setAttribute('font-size', '12');
+                text.textContent = cat;
+                svg.appendChild(text);
+            });
+
+            // Place substance boxes
+            addSubstanceBox(svg, 'Al', xPositions[0], yPositions[0]);
+            addSubstanceBox(svg, 'Al₂O₃', xPositions[1], yPositions[3]);
+            addSubstanceBox(svg, 'Al(OH)₃', xPositions[2], yPositions[3]);
+            addSubstanceBox(svg, 'Na[Al(OH)₄]', xPositions[3], yPositions[3]);
+            addSubstanceBox(svg, 'AlCl₃', xPositions[4], yPositions[3]);
+
+            // Draw transformation arrows
+            drawArrow(svg, xPositions[0] + 30, yPositions[0], xPositions[1], yPositions[3], '①', 'diagonal');
+            drawArrow(svg, xPositions[0] + 30, yPositions[0], xPositions[2], yPositions[3], '②③', 'diagonal');
+            drawArrow(svg, xPositions[1], yPositions[3], xPositions[2], yPositions[3], '⑤', 'right');
+            drawBidirectionalArrow(svg, xPositions[2], yPositions[3], xPositions[3], yPositions[3], '⑥');
+        }
+
+        function drawClChart() {
+            const svg = document.getElementById('clSvg');
+            svg.innerHTML = '';
+
+            const width = 800;
+            const height = 650;
+            const marginLeft = 80;
+            const marginTop = 60;
+            const marginRight = 60;
+            const marginBottom = 100;
+
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
+
+            // Background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', width);
+            bg.setAttribute('height', height);
+            bg.setAttribute('fill', '#1a1a1a');
+            svg.appendChild(bg);
+
+            // Y-axis positions
+            const yPositions = {
+                '-1': marginTop + chartHeight * 0.8,
+                0: marginTop + chartHeight,
+                '+1': marginTop + chartHeight * 0.4,
+                '+5': marginTop + chartHeight * 0.1,
+                '+7': marginTop
+            };
+
+            const yLabels = {
+                '-1': '-1',
+                0: '0',
+                '+1': '+1',
+                '+5': '+5',
+                '+7': '+7'
+            };
+
+            // Draw Y-axis
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', marginLeft);
+            yAxis.setAttribute('y1', marginTop);
+            yAxis.setAttribute('x2', marginLeft);
+            yAxis.setAttribute('y2', marginTop + chartHeight);
+            yAxis.setAttribute('class', 'axis-line');
+            svg.appendChild(yAxis);
+
+            // Y-axis labels
+            Object.entries(yLabels).forEach(([val, label]) => {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', marginLeft - 20);
+                text.setAttribute('y', yPositions[val] + 5);
+                text.setAttribute('text-anchor', 'end');
+                text.setAttribute('class', 'axis-label');
+                text.textContent = label;
+                svg.appendChild(text);
+            });
+
+            // X-axis
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', marginLeft);
+            xAxis.setAttribute('y1', marginTop + chartHeight);
+            xAxis.setAttribute('x2', width - marginRight);
+            xAxis.setAttribute('y2', marginTop + chartHeight);
+            xAxis.setAttribute('class', 'axis-line');
+            svg.appendChild(xAxis);
+
+            // X-axis categories
+            const xCategories = ['单质', '氢化物', '含氧酸', '盐'];
+            const xPositions = [
+                marginLeft + 100,
+                marginLeft + 260,
+                marginLeft + 420,
+                marginLeft + 580
+            ];
+
+            xCategories.forEach((cat, idx) => {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', xPositions[idx]);
+                text.setAttribute('y', marginTop + chartHeight + 40);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('class', 'axis-label');
+                text.textContent = cat;
+                svg.appendChild(text);
+            });
+
+            // Place substance boxes
+            addSubstanceBox(svg, 'Cl₂', xPositions[0], yPositions[0]);
+            addSubstanceBox(svg, 'HCl', xPositions[1], yPositions['-1']);
+            addSubstanceBox(svg, 'HClO', xPositions[2], yPositions['+1']);
+            addSubstanceBox(svg, 'HClO₄', xPositions[2], yPositions['+7']);
+            addSubstanceBox(svg, 'NaClO', xPositions[3], yPositions['+1']);
+            addSubstanceBox(svg, 'CaClO', xPositions[3], yPositions['+1'] + 30);
+            addSubstanceBox(svg, 'KClO₃', xPositions[3], yPositions['+5']);
+
+            // Draw transformation arrows
+            drawArrow(svg, xPositions[0] + 30, yPositions[0], xPositions[1], yPositions['-1'], '①', 'diagonal');
+            drawArrow(svg, xPositions[0] + 30, yPositions[0], xPositions[2], yPositions['+1'], '②③', 'diagonal');
+            drawArrow(svg, xPositions[0] + 30, yPositions[0], xPositions[3], yPositions['+1'], '④', 'diagonal');
+            drawArrow(svg, xPositions[0] + 30, yPositions[0], xPositions[3], yPositions['+5'], '⑤', 'diagonal');
+        }
+
+        function drawCoordinateSystem(svg, width, height, marginLeft, marginTop, marginRight, marginBottom, valenceStates, substances) {
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
+
+            // Draw X-axis
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', marginLeft);
+            xAxis.setAttribute('y1', marginTop + chartHeight);
+            xAxis.setAttribute('x2', width - marginRight);
+            xAxis.setAttribute('y2', marginTop + chartHeight);
+            xAxis.setAttribute('class', 'axis-line');
+            svg.appendChild(xAxis);
+
+            // Draw Y-axis
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', marginLeft);
+            yAxis.setAttribute('y1', marginTop);
+            yAxis.setAttribute('x2', marginLeft);
+            yAxis.setAttribute('y2', marginTop + chartHeight);
+            yAxis.setAttribute('class', 'axis-line');
+            svg.appendChild(yAxis);
+
+            // Y-axis labels
+            valenceStates.forEach((val, idx) => {
+                const y = marginTop + chartHeight - (chartHeight / (valenceStates.length - 1)) * idx;
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', marginLeft - 20);
+                label.setAttribute('y', y + 5);
+                label.setAttribute('text-anchor', 'end');
+                label.setAttribute('class', 'axis-label');
+                label.textContent = '+' + val;
+                svg.appendChild(label);
+            });
+
+            // X-axis label
+            const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xLabel.setAttribute('x', width / 2);
+            xLabel.setAttribute('y', height - 10);
+            xLabel.setAttribute('text-anchor', 'middle');
+            xLabel.setAttribute('class', 'axis-label');
+            xLabel.textContent = '物质类别';
+            svg.appendChild(xLabel);
+
+            // Y-axis label
+            const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yLabel.setAttribute('x', 30);
+            yLabel.setAttribute('y', marginTop + chartHeight / 2);
+            yLabel.setAttribute('text-anchor', 'middle');
+            yLabel.setAttribute('transform', `rotate(-90, 30, ${marginTop + chartHeight / 2})`);
+            yLabel.setAttribute('class', 'axis-label');
+            yLabel.textContent = '价态';
+            svg.appendChild(yLabel);
+        }
+
+        function addSubstanceBox(svg, name, x, y) {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', x - 40);
+            rect.setAttribute('y', y - 15);
+            rect.setAttribute('width', 80);
+            rect.setAttribute('height', 30);
+            rect.setAttribute('fill', '#4dd0e1');
+            rect.setAttribute('rx', '4');
+            g.appendChild(rect);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x);
+            text.setAttribute('y', y + 5);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('fill', '#fff');
+            text.setAttribute('font-weight', 'bold');
+            text.setAttribute('font-size', '13');
+            text.textContent = name;
+            g.appendChild(text);
+
+            svg.appendChild(g);
+        }
+
+        function drawArrow(svg, fromX, fromY, toX, toY, label, direction) {
+            // Draw line
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', fromX);
+            line.setAttribute('y1', fromY);
+            line.setAttribute('x2', toX);
+            line.setAttribute('y2', toY);
+            line.setAttribute('class', 'arrow-line');
+            svg.appendChild(line);
+
+            // Calculate arrow head
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+            const arrowSize = 8;
+            const arrowX = toX - Math.cos(angle) * arrowSize;
+            const arrowY = toY - Math.sin(angle) * arrowSize;
+
+            // Draw arrow head
+            const arrowPath = `M ${toX} ${toY} L ${arrowX - Math.sin(angle) * 5} ${arrowY + Math.cos(angle) * 5} L ${arrowX + Math.sin(angle) * 5} ${arrowY - Math.cos(angle) * 5}`;
+            const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            arrow.setAttribute('d', arrowPath);
+            arrow.setAttribute('class', 'arrow-head');
+            svg.appendChild(arrow);
+
+            // Add label
+            const labelX = (fromX + toX) / 2 - 15;
+            const labelY = (fromY + toY) / 2 - 10;
+            const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            labelText.setAttribute('x', labelX);
+            labelText.setAttribute('y', labelY);
+            labelText.setAttribute('class', 'arrow-label');
+            labelText.setAttribute('font-size', '11');
+            labelText.textContent = label;
+            svg.appendChild(labelText);
+        }
+
+        function drawBidirectionalArrow(svg, x1, y1, x2, y2, label) {
+            drawArrow(svg, x1, y1, x2, y2, label, 'right');
+            drawArrow(svg, x2 - 5, y2, x1 + 5, y1, '', 'left');
+        }
+
+        // Initialize first chart
+        window.addEventListener('load', () => {
+            drawNaChart();
+        });
+    </script>
+</body>
+</html>
